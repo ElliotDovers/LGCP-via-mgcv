@@ -1,4 +1,4 @@
-## Function to fit LGCP via INLA (two ways)
+## Function to fit LGCP via INLA
 
 fit_inla <- function(data, quad, n_mesh, pred){
   
@@ -22,7 +22,7 @@ fit_inla <- function(data, quad, n_mesh, pred){
                                        prior.range = c(1, 0.01)
   )
   # also try the default settings
-  spde.matern <- inla.spde2.matern(mesh)
+  # spde.matern <- inla.spde2.matern(mesh)
   
   # make A matrix for unstructured data
   data_A <- inla.spde.make.A(mesh = mesh, loc = as.matrix(data[,c("x","y")]))
@@ -76,14 +76,14 @@ fit_inla <- function(data, quad, n_mesh, pred){
                  E = inla.stack.data(stk)$e,
                  control.compute = list(cpo=TRUE, waic = TRUE, dic = TRUE)
   )
-  resultB <- inla(y ~ Intercept + env + f(i, model = spde.matern) - 1,
-                  family="poisson",
-                  data=inla.stack.data(stk),
-                  control.predictor=list(A=inla.stack.A(stk), compute=TRUE),
-                  control.family = list(link = "log"),
-                  E = inla.stack.data(stk)$e,
-                  control.compute = list(cpo=TRUE, waic = TRUE, dic = TRUE)
-  )
+  # resultB <- inla(y ~ Intercept + env + f(i, model = spde.matern) - 1,
+  #                 family="poisson",
+  #                 data=inla.stack.data(stk),
+  #                 control.predictor=list(A=inla.stack.A(stk), compute=TRUE),
+  #                 control.family = list(link = "log"),
+  #                 E = inla.stack.data(stk)$e,
+  #                 control.compute = list(cpo=TRUE, waic = TRUE, dic = TRUE)
+  # )
   
   # create index to extract predictions
   index.pred.response <- inla.stack.index(stk, tag="pred_response")$data
@@ -114,28 +114,29 @@ fit_inla <- function(data, quad, n_mesh, pred){
                   TIME = result$cpu.used[4], DEF_KNOT_LOC = T, INLA_K = mesh$n, CRIT = NA, EDF = NA, method = NA
   )
   
-  # get the predictions
-  m.prd <- exp(resultB$summary.fitted.values$mean[index.pred.response])
-  # calculate the KL divergence metric
-  KLdiv <- as.numeric(pred$quad.size %*% (pred$lambda * log(pred$lambda / m.prd))) - as.numeric(pred$quad.size %*% (pred$lambda - m.prd))
-  # calculate the relative MAE
-  MAE <- mean(abs(m.prd-pred$lambda))
-  # get the fixed par estimate
-  BETA_HAT <- resultB$summary.fixed["env","mean"]
-  # calculate the rmse in beta estimate
-  SQER_BETA <- (BETA_HAT - attr(pres, "sim.info")$Beta.env)^2
-  # calculate coverage for beta estimate
-  COVER_BETA <- resultB$summary.fixed["env","0.025quant"] <= attr(pres, "sim.info")$Beta.env & resultB$summary.fixed["env","0.975quant"] >= attr(pres, "sim.info")$Beta.env
-  # calculate the rmse in range parameter estimate
-  SQER_RHO <- (sqrt(8)/exp(resultB$summary.hyperpar["Theta2","mean"]) - attr(pres, "sim.info")$latent.practical.range)^2
-  # calculate coverage for range parameter estimate (note the flip of the conditions due to the inversion!)
-  COVER_RHO <- (sqrt(8)/exp(resultB$summary.hyperpar["Theta2","0.025quant"]))/2 >= attr(pres, "sim.info")$latent.practical.range & (sqrt(8)/exp(resultB$summary.hyperpar["Theta2","0.975quant"]))/2 <= attr(pres, "sim.info")$latent.practical.range
+  # # get the predictions
+  # m.prd <- exp(resultB$summary.fitted.values$mean[index.pred.response])
+  # # calculate the KL divergence metric
+  # KLdiv <- as.numeric(pred$quad.size %*% (pred$lambda * log(pred$lambda / m.prd))) - as.numeric(pred$quad.size %*% (pred$lambda - m.prd))
+  # # calculate the relative MAE
+  # MAE <- mean(abs(m.prd-pred$lambda))
+  # # get the fixed par estimate
+  # BETA_HAT <- resultB$summary.fixed["env","mean"]
+  # # calculate the rmse in beta estimate
+  # SQER_BETA <- (BETA_HAT - attr(pres, "sim.info")$Beta.env)^2
+  # # calculate coverage for beta estimate
+  # COVER_BETA <- resultB$summary.fixed["env","0.025quant"] <= attr(pres, "sim.info")$Beta.env & resultB$summary.fixed["env","0.975quant"] >= attr(pres, "sim.info")$Beta.env
+  # # calculate the rmse in range parameter estimate
+  # SQER_RHO <- (sqrt(8)/exp(resultB$summary.hyperpar["Theta2","mean"]) - attr(pres, "sim.info")$latent.practical.range)^2
+  # # calculate coverage for range parameter estimate (note the flip of the conditions due to the inversion!)
+  # COVER_RHO <- (sqrt(8)/exp(resultB$summary.hyperpar["Theta2","0.025quant"]))/2 >= attr(pres, "sim.info")$latent.practical.range & (sqrt(8)/exp(resultB$summary.hyperpar["Theta2","0.975quant"]))/2 <= attr(pres, "sim.info")$latent.practical.range
+  # 
+  # e1 <- data.frame(GP_APPROX = "default", COV_FN = 2, POW = 1, K = n_mesh, FIT = "inla", KL = KLdiv, MAE = MAE,
+  #                  SQER_BETA = SQER_BETA, COVER_BETA = COVER_BETA, BETA_HAT = BETA_HAT,
+  #                  SQER_RHO = SQER_RHO, COVER_RHO = COVER_RHO, RHO_HAT = (sqrt(8)/exp(resultB$summary.hyperpar["Theta2","mean"])),
+  #                  TIME = resultB$cpu.used[4], DEF_KNOT_LOC = T, INLA_K = mesh$n, CRIT = NA, EDF = NA, method = NA
+  # )
   
-  e1 <- data.frame(GP_APPROX = "default", COV_FN = 2, POW = 1, K = n_mesh, FIT = "inla", KL = KLdiv, MAE = MAE,
-                   SQER_BETA = SQER_BETA, COVER_BETA = COVER_BETA, BETA_HAT = BETA_HAT,
-                   SQER_RHO = SQER_RHO, COVER_RHO = COVER_RHO, RHO_HAT = (sqrt(8)/exp(resultB$summary.hyperpar["Theta2","mean"])),
-                   TIME = resultB$cpu.used[4], DEF_KNOT_LOC = T, INLA_K = mesh$n, CRIT = NA, EDF = NA, method = NA
-  )
-  
-  return(rbind(e0, e1))
+  # return(rbind(e0, e1))
+  return(e0)
 }

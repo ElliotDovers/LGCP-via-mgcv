@@ -39,13 +39,18 @@ res$scenario_env <- factor(res$env_range,
                                       "rho[X]==50")
 )
 
+# OLD SET OF APPROACHES TRIALLED MORE COMBINATIONS OF CRITERIA - UPDATED FOR S() SIMULATIONS
+# res$Approach <- factor(paste(res$GP_APPROX, res$CRIT, res$method, sep = ":"),
+#                     levels = c('gp.smooth:NA:REML', 'gp.smooth:ll:REML', 'gp.smooth:aic:REML', 'gp.smooth:score:REML', 'gp.smooth:bic:REML', 'gp.smooth:NA:GCV.Cp', 'gp.smooth:ll:GCV.Cp', 'gp.smooth:aic:GCV.Cp', 'gp.smooth:score:GCV.Cp', 'gp.smooth:bic:GCV.Cp', 'tprs.smooth:NA:REML', 'tprs.smooth:NA:GCV.Cp', 'pcmatern:NA:NA', 'default:NA:NA'),
+#                     labels = c("mgcv REML GP Def.", "mgcv REML GP LL", "mgcv REML GP AIC", "mgcv REML GP SCORE", "mgcv REML GP BIC",  "mgcv GCV GP Def.", "mgcv GCV GP LL", "mgcv GCV GP AIC", "mgcv GCV GP SCORE", "mgcv GCV GP BIC", "mgcv REML TPRS Def.", "mgcv GCV TPRS Def.",  "INLA Fuglstad P.C.", "INLA Def.")
+# )
 res$Approach <- factor(paste(res$GP_APPROX, res$CRIT, res$method, sep = ":"),
-                    levels = c('gp.smooth:NA:REML', 'gp.smooth:ll:REML', 'gp.smooth:aic:REML', 'gp.smooth:score:REML', 'gp.smooth:bic:REML', 'gp.smooth:NA:GCV.Cp', 'gp.smooth:ll:GCV.Cp', 'gp.smooth:aic:GCV.Cp', 'gp.smooth:score:GCV.Cp', 'gp.smooth:bic:GCV.Cp', 'tprs.smooth:NA:REML', 'tprs.smooth:NA:GCV.Cp', 'pcmatern:NA:NA', 'default:NA:NA'),
-                    labels = c("mgcv REML GP Def.", "mgcv REML GP LL", "mgcv REML GP AIC", "mgcv REML GP SCORE", "mgcv REML GP BIC",  "mgcv GCV GP Def.", "mgcv GCV GP LL", "mgcv GCV GP AIC", "mgcv GCV GP SCORE", "mgcv GCV GP BIC", "mgcv REML TPRS Def.", "mgcv GCV TPRS Def.",  "INLA Fuglstad P.C.", "INLA Def.")
+                       levels = c('gp.smooth:NA:REML', 'gp.smooth:score:REML', 'gp.smooth:NA:GCV.Cp', 'gp.smooth:score:GCV.Cp', 'tprs.smooth:NA:REML', 'tprs.smooth:NA:GCV.Cp', 'pcmatern:NA:NA'),
+                       labels = c("mgcv REML GP Def.", "mgcv REML GP SCORE", "mgcv GCV GP Def.", "mgcv GCV GP SCORE", "mgcv REML TPRS Def.", "mgcv GCV TPRS Def.",  "INLA Fuglstad P.C.")
 )
 
 # put together results for appendices
-tab <- res %>% filter(scen == "30:30" & intercept == -3.5) %>% group_by(Approach, K) %>% summarise(MAE = mean(MAE), RMSE_BETA = sqrt(mean(SQER_BETA)), COVERAGE = mean(COVER_BETA), TIMING = mean(TIME), RMSE_RHO = sqrt(mean(SQER_RHO)), NSIMS = length(sim))
+tab <- res %>% filter(scen == "30:30" & intercept == -3.5) %>% group_by(Approach, K) %>% summarise(MAE = mean(MAE), RMSE_BETA = sqrt(mean(SQER_BETA)), COVERAGE = mean(COVER_BETA), TIMING = mean(ALL_TIME), RMSE_RHO = sqrt(mean(SQER_RHO)), NSIMS = length(sim))
 # remove some of the unnecessary comparisons
 tab <- tab %>% filter(!Approach %in% c("mgcv REML GP BIC", "mgcv GCV GP BIC", "mgcv REML TPRS Def."))
 # tidy up some columns
@@ -86,13 +91,15 @@ res$E_N <- factor(res$intercept,
                   labels = paste0("E(N)==", round((res %>% group_by(intercept) %>% summarise(E_N = mean(n)))$E_N))
 )
 
-# set up colors for all models
-fit_cols_all <- c("darkkhaki", "darkolivegreen1", "darkolivegreen2", "darkolivegreen3", "darkolivegreen4", # Our mgcv models REML
-                  "darkgoldenrod1", "khaki", "darkgoldenrod2", "darkgoldenrod4", "purple", # Our mgcv models GCV (ACUTALLY UBRE)
-                  "tomato1", "tomato4", # Youngman et all model
-                  "royalblue1", "royalblue4" # INLA models
+# set up colors for all models - UPDATED FOR S() SIMULATIONS
+# fit_cols_all <- c("darkkhaki", "darkolivegreen1", "darkolivegreen2", "darkolivegreen3", "darkolivegreen4", # Our mgcv models REML
+#                   "darkgoldenrod1", "khaki", "darkgoldenrod2", "darkgoldenrod4", "purple", # Our mgcv models GCV (ACUTALLY UBRE)
+#                   "tomato1", "tomato4", # Youngman et all model
+#                   "royalblue1", "royalblue4" # INLA models
+# )
+fit_cols_all <- c("darkkhaki", "darkolivegreen3", "darkgoldenrod1", "darkgoldenrod4", "tomato1",
+                  "tomato4", "royalblue1"
 )
-
 # separate out the results for the INLA comparison
 # 1: "mgcv REML GP Def."
 # 2: "mgcv REML GP LL"
@@ -108,7 +115,18 @@ fit_cols_all <- c("darkkhaki", "darkolivegreen1", "darkolivegreen2", "darkoliveg
 # 12: "mgcv GCV TPRS Def."
 # 13: "INLA Fuglstad P.C."
 # 14: "INLA Def."
-mods_to_comp <- c(6,13)
+
+### THESE HAVE CHANGED WITH THE REDUCED CRITERIA COMPARISONS (UPDATED FOR S() SIMULATIONS):
+# 1: "mgcv REML GP Def." (was 1)
+# 2: "mgcv REML GP SCORE" (was 4)
+# 3: "mgcv GCV GP Def." (was 6)
+# 4: "mgcv GCV GP SCORE" (was 9)
+# 5: "mgcv REML TPRS Def." (was 11)
+# 6: "mgcv GCV TPRS Def." (was 12)
+# 7: "INLA Fuglstad P.C." (was 13)
+
+# mods_to_comp <- c(6,13) UPDATED FOR S() SIMULATIONS
+mods_to_comp <- c(3,7)
 res_sec1 <- res %>% filter(env_range == 30 & lat_range == 30 & intercept == -3.5 & Approach %in% levels(res$Approach)[mods_to_comp])
 
 # define the model colours for plotting
@@ -149,7 +167,7 @@ p2 <- ggplot(data = cps, aes(x = K, y = cp, color = Approach, fill = Approach)) 
   ) +
   ggtitle(label = "B")
 
-p3 <- ggplot(data = res_sec1 %>% group_by(Approach, K) %>% summarise(y = mean(TIME), sd = sd(TIME)), aes(x = K, y = y, color = Approach, fill = Approach)) +
+p3 <- ggplot(data = res_sec1 %>% group_by(Approach, K) %>% summarise(y = mean(ALL_TIME), sd = sd(ALL_TIME)), aes(x = K, y = y, color = Approach, fill = Approach)) +
   geom_point(position = position_dodge(3)) + geom_errorbar(aes(ymin = y-sd, ymax = y + sd), position = position_dodge(3), width = 15) + geom_line(position = position_dodge(3)) +
   scale_y_continuous(name = "Comp. Time (sec)") +
   scale_x_continuous(name = "Basis Dimension (mgcv knots/INLA vertices)", breaks = c(25, 100, 200, 300, 400), labels = c("25 (mgcv def.)", "100", "200", "300", "400")) +
@@ -170,7 +188,8 @@ dev.off()
 ## Appendices Plots ##
 
 # full results plots
-mods_to_comp <- c(6, 4, 9, 13)
+# mods_to_comp <- c(6, 4, 9, 13) UPDATED FOR S() SIMULATIONS
+mods_to_comp <- c(3, 2, 4, 7)
 tmp.plot.data <- res %>% filter(env_range == 30 & Approach %in% levels(res$Approach)[mods_to_comp]) %>% group_by(scenario_lat, E_N, Approach, K) %>% summarise(y = mean(MAE), sd = sd(MAE))
 tmp.plot.data$Approach <- factor(tmp.plot.data$Approach, levels = levels(res$Approach)[mods_to_comp])
 png(filename = paste0(home.wd, "/Figures/append_sim_results_mae.png"), width = 6.3 * plot.res, height = 5.5 * plot.res, res = plot.res)
@@ -229,13 +248,14 @@ dev.off()
         
 
 # Choosing k plot for appendices
-mods_to_comp <- c(6,4,9)
+# mods_to_comp <- c(6,4,9) UPDATED FOR S() SIMULATIONS
+mods_to_comp <- c(3, 2, 4)
 tmp.plot.data <- res %>% filter(env_range == 30 & Approach %in% levels(res$Approach)[mods_to_comp]) %>% group_by(scenario_lat, E_N, Approach, K) %>% summarise(y = mean(EDF), sd = sd(EDF))
 tmp.plot.data$Approach <- factor(tmp.plot.data$Approach, levels = levels(res$Approach)[mods_to_comp])
 png(filename = paste0(home.wd, "/Figures/append_sim_results_choosing_k.png"), width = 6.2 * plot.res, height = 5.5 * plot.res, res = plot.res)
 ggplot(data = tmp.plot.data, aes(x = K, y = y, color = Approach, fill = Approach, linetype = "dummy")) +
   geom_point(position = position_dodge(15)) + geom_errorbar(aes(ymin = y-sd, ymax = y + sd, linetype = NULL), position = position_dodge(15), width = 30) +
-  facet_wrap( ~ scenario_lat + E_N, labeller = label_parsed) +
+  facet_wrap( ~ scenario_lat + E_N, labeller = label_parsed, scales = "free_y") +
   scale_y_continuous(name = "Effective Degrees of Freedom") +
   scale_x_continuous(name = "Basis Dimension (mgcv knots/INLA vertices)", breaks = c(25, 100, 200, 300, 400), labels = c("25", "100", "200", "300", "400")) +
   scale_color_manual(values = fit_cols_all[mods_to_comp], name = "Estimated Range", labels = c("Default", "Opt. via REML", "Opt. via UBRE")) +
@@ -250,7 +270,8 @@ ggplot(data = tmp.plot.data, aes(x = K, y = y, color = Approach, fill = Approach
 dev.off()
 
 # Estimating spatial range parameter plot for appendices
-mods_to_comp <- c(4, 9, 13)
+# mods_to_comp <- c(4, 9, 13) UPDATED FOR S() SIMULATIONS
+mods_to_comp <- c(2, 4, 7)
 true_ranges <- expand.grid(levels(res$scenario_lat), levels(res$E_N))
 colnames(true_ranges) <- c("scenario_lat", "E_N")
 true_ranges$intercepts <- rep(c(10, 30, 50), times = 3)
@@ -280,7 +301,7 @@ ggplot(data = tmp.plot.data, aes(x = K, y = y, color = Approach, fill = Approach
 dev.off()
 
 # # REML vs UBRE
-# mods_to_comp <- c(1, 6)
+# mods_to_comp <- c(1, 3)
 # tmp.plot.data <- res %>% filter(env_range == 30 & Approach %in% levels(res$Approach)[mods_to_comp]) %>% group_by(scenario_lat, E_N, Approach, K) %>% summarise(y = mean(COVER_BETA), sd = sd(COVER_BETA))
 # tmp.plot.data$Approach <- factor(tmp.plot.data$Approach, levels = levels(res$Approach)[mods_to_comp])
 # png(filename = paste0(home.wd, "/Figures/append_sim_results_reml_vs_ubre.png"), width = 6.2 * plot.res, height = 5.5 * plot.res, res = plot.res)
@@ -301,7 +322,8 @@ dev.off()
 # dev.off()
 
 # GP vs TPRS
-mods_to_comp <- c(1,6,11,12)
+# mods_to_comp <- c(1,6,11,12) UPDATED FOR S() SIMULATIONS
+mods_to_comp <- c(1, 3, 5, 6)
 res_append <- res %>% filter(env_range == 30 & lat_range == 30 & intercept == -3.5 & method == "REML" & !is.na(method) & Approach %in% levels(res$Approach)[mods_to_comp])
 fit_cols <- c("darkgoldenrod1", "purple")
 
@@ -332,13 +354,13 @@ p2 <- ggplot(data = cps, aes(x = K, y = cp, color = Approach)) +
   scale_fill_manual(values = alpha(fit_cols, alpha = 0.5), name = "Basis Functions", labels = c("GP", "TPRS")) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
-        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 3),
+        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 1),
         axis.text.x = element_blank(), axis.ticks.x = element_blank(), legend.key = element_blank(),
         plot.margin = margin(t = 0, r = 0, b = 0, l = 3)
   ) +
   ggtitle(label = "B")
 
-p3 <- ggplot(data = res_append %>% group_by(Approach, K) %>% summarise(y = mean(TIME), sd = sd(TIME)), aes(x = K, y = y, color = Approach, fill = Approach)) +
+p3 <- ggplot(data = res_append %>% group_by(Approach, K) %>% summarise(y = mean(ALL_TIME), sd = sd(ALL_TIME)), aes(x = K, y = y, color = Approach, fill = Approach)) +
   geom_point(position = position_dodge(3)) + geom_errorbar(aes(ymin = y-sd, ymax = y + sd), position = position_dodge(3), width = 15) + geom_line(position = position_dodge(3)) +
   scale_y_continuous(name = "Comp. Time (sec)") +
   scale_x_continuous(name = "Basis Dimension (mgcv knots/INLA vertices)", breaks = c(25, 100, 200, 300, 400), labels = c("25 (mgcv def.)", "100", "200", "300", "400")) +
@@ -346,8 +368,8 @@ p3 <- ggplot(data = res_append %>% group_by(Approach, K) %>% summarise(y = mean(
   scale_fill_manual(values = alpha(fit_cols, alpha = 0.5)) +
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
-        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 7),
-        plot.margin = margin(t = 0, r = 100, b = 6, l = 20), legend.position = "none"
+        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 6),
+        plot.margin = margin(t = 0, r = 100, b = 6, l = 15), legend.position = "none"
   ) +
   ggtitle(label = "C")
 

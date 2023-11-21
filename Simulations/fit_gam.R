@@ -15,8 +15,9 @@ fit_gam <- function(data, quad, pred, n_knots, which.cov.fn = 2, crit.method = c
   # check the IPP fit
   # mA <- gam(response ~ env, data = tmp.dat, family = poisson(), weights = p.wt, method="REML")
   # mB <- scampr::scampr(present ~ env, data = tmp.dat, include.sre = F)
-  time0 <- system.time(assign("m0", gam(response ~ env + te(x,y, bs = "gp", k = n_knots, m = list(c(which.cov.fn)), d = 2), data = tmp.dat, family = poisson(), weights = p.wt, method=crit.method)))
-
+  # time0 <- system.time(assign("m0", gam(response ~ env + te(x,y, bs = "gp", k = n_knots, m = list(c(which.cov.fn)), d = 2), data = tmp.dat, family = poisson(), weights = p.wt, method=crit.method)))
+  time0 <- system.time(assign("m0", gam(response ~ env + s(x,y, bs = "gp", k = n_knots, m = c(which.cov.fn)), data = tmp.dat, family = poisson(), weights = p.wt, method=crit.method)))
+  
   ## EVALUATION OF MODEL #######################################################
   
   # get the predictions
@@ -34,13 +35,13 @@ fit_gam <- function(data, quad, pred, n_knots, which.cov.fn = 2, crit.method = c
   # calculate coverage for beta estimate
   COVER_BETA <- BETA_HAT + qnorm(0.025) * BETA_SE  <= attr(pres, "sim.info")$Beta.env & BETA_HAT + qnorm(0.975) * BETA_SE >= attr(pres, "sim.info")$Beta.env
   # calculate the rmse in range parameter estimate
-  SQER_RHO <- (m0$smooth[[1]]$margin[[1]]$gp.defn[2] - attr(pres, "sim.info")$latent.practical.range)^2
+  SQER_RHO <- (m0$smooth[[1]]$gp.defn[2] - attr(pres, "sim.info")$latent.practical.range)^2
   # calculate coverage for range parameter estimate
   COVER_RHO <- NA
-  e0 <- data.frame(GP_APPROX = class(m0$smooth[[1]]$margin[[1]]), COV_FN = m0$smooth[[1]]$margin[[1]]$gp.defn[1], POW = m0$smooth[[1]]$margin[[1]]$gp.defn[3],
-                   K = m0$smooth[[1]]$margin[[1]]$bs.dim, FIT = "mgcv", KL = KLdiv, MAE = MAE,
+  e0 <- data.frame(GP_APPROX = class(m0$smooth[[1]])[1], COV_FN = m0$smooth[[1]]$gp.defn[1], POW = m0$smooth[[1]]$gp.defn[3],
+                   K = m0$smooth[[1]]$bs.dim, FIT = "mgcv", KL = KLdiv, MAE = MAE,
                    SQER_BETA = SQER_BETA, COVER_BETA = COVER_BETA, BETA_HAT = BETA_HAT,
-                   SQER_RHO = SQER_RHO, COVER_RHO = COVER_RHO, RHO_HAT = m0$smooth[[1]]$margin[[1]]$gp.defn[2],
+                   SQER_RHO = SQER_RHO, COVER_RHO = COVER_RHO, RHO_HAT = m0$smooth[[1]]$gp.defn[2],
                    TIME = time0[3], DEF_KNOT_LOC = T, INLA_K = NA, CRIT = NA, EDF = sum(m0$edf), method = crit.method
   )
 
