@@ -20,6 +20,10 @@ quad = data.frame(q_xy,lapply(gorillas.extra,function(x){x[q_xy]}),
                   pt=0,wt=area(gorillas$window)/nrow(q_xy))
 dat = merge(pp, quad, all=T)
 
+# remove duplicated - NOT INCLUDED IN AmStat paper
+pp <- pp[!duplicated(paste(pp$x, pp$y)), ]
+dat = merge(pp, quad, all=T)
+
 # center and scale covariates
 dat$elevation <- scale(dat$elevation)
 dat$slopeangle <- scale(dat$slopeangle)
@@ -66,17 +70,32 @@ domain.grid <- dat[dat$pt == 0, ]
 domain.grid$z_ipp = predict(m_ipp, newdata=domain.grid, type = "response")
 domain.grid$z = predict(m, newdata=domain.grid, type = "response")
 
+# multiply by the quadrature weights to get on the right scale
+domain.grid$z_ipp = domain.grid$z_ipp * domain.grid$wt
+domain.grid$z = domain.grid$z * domain.grid$wt
+
 # create the pixel images (uses the window supplied in the original gorillas data)
 pred_ipp.im = as.im(domain.grid[,c("x","y","z_ipp")], W = gorillas$window)
 pred.im = as.im(domain.grid[,c("x","y","z")], W = gorillas$window)
 
+# add in the units for the pixel images
+pred_ipp.im$units <- gorillas$window$units
+pred.im$units <- gorillas$window$units
+
+# NOT ICLUDED
+gorillas.pp <- as.ppp(pp[,c("x","y")], W = gorillas$window)
+
 # calculate the observed K functions
-K_obs_ipp <- Kinhom(gorillas, lambda = pred_ipp.im, correction = "border")
-K_obs <- Kinhom(gorillas, lambda = pred.im, correction = "border")
+K_obs_ipp <- Kinhom(gorillas.pp, lambda = pred_ipp.im, correction = "border")
+K_obs <- Kinhom(gorillas.pp, lambda = pred.im, correction = "border")
 
 # simulate the envelopes/bounds
-K_env_ipp <- envelope(gorillas, fun = Kinhom, simulate = expression(rpoispp(lambda = pred_ipp.im)))
-K_env <- envelope(gorillas, fun = Kinhom, simulate = expression(rpoispp(lambda = pred.im)))
+K_env_ipp <- envelope(gorillas.pp, fun = Kinhom, simulate = expression(rpoispp(lambda = pred_ipp.im)))
+K_env <- envelope(gorillas.pp, fun = Kinhom, simulate = expression(rpoispp(lambda = pred.im)))
+
+# NOT INCLUEDED
+K_env_ipp <- envelope(gorillas.pp, fun = Kinhom, simulate = expression(rpoispp(lambda = pred_ipp.im)), transform = expression(sqrt(./pi)))
+K_env <- envelope(gorillas.pp, fun = Kinhom, simulate = expression(rpoispp(lambda = pred.im)), transform = expression(sqrt(./pi)))
 
 # fit an IPP for comparison
 m_ipp_poly <- gam(pt/wt ~ poly(elevation, 2) + poly(waterdist, 2) + poly(slopeangle, 2) + heat + slopetype + vegetation, data=dat, family=poisson(), weights=wt, method="REML")
@@ -121,6 +140,40 @@ axis(side = 2, at = seq(0, 3e6, by = 1e6), labels = c("0", seq(1e6, 3e6, by = 1e
 polygon(c(rev(K_env$r), K_env$r), c(rev(K_env$hi), K_env$lo), col = 'grey80', border = NA)
 lines(K_env$r, K_env$mmean, lty = "dashed")
 lines(K_obs$r, K_obs$border, col = "red")
+mtext(text = "distance (m)", side = 1, srt = 90, cex = 1, line = 2)
+mtext(text = "Inhomogeneous K Function", side = 2, srt = 90, cex = 1, xpd = T, outer = T, line = -1)
+mtext(text = "Estimated Intensity Surfaces with nest locations (x)", side = 4, srt = 90, cex = 1, xpd = T, outer = T, line = -16)
+mtext(text = "B: log-Gaussian Cox Process", side = 3, cex = 1, line = 0.5, adj = 0)
+legend(x = 0, y = 4e6, legend = c("Observed", "Theoretic", "95% Sim. Bounds"),
+       col = c("red", "black", "grey80"), lty = c("solid", "dashed", "solid"), cex = 1,
+       lwd = c(2, 2, 2), bty = "n")
+par(mar = c(3.1, 0, 1.1, 0))
+plot(log(pred.im), box = F, main = "", col = terrain.colors, ribbon = F)
+points(pp[,c("x","y")], col = rgb(0,0,0,alpha = 0.25), pch = 4)
+dev.off()
+
+png(filename = paste0(home.wd, "/app_results_lfuncs.png"), res = plot.res, width = 6.2 * plot.res, height = 4.5 * plot.res)
+layout(mat = matrix(1:4, nrow = 2, ncol = 2, byrow = TRUE), widths = c(0.55, 0.45), heights = c(0.5, 0.5))
+par(mar = c(2.1, 3.1, 2.1, 0))
+plot(K_env_ipp$r, K_env_ipp$mmean, type = "n", ylim = range(c(K_env_ipp$obs, K_env_ipp$hi, K_env_ipp$lo)),
+     ylab = "", xlab = "", xaxt = "n")#, yaxt = "n")
+# axis(side = 2, at = seq(0, 3e6, by = 1e6), labels = c("0", seq(1e6, 3e6, by = 1e6)))
+polygon(c(rev(K_env_ipp$r), K_env_ipp$r), c(rev(K_env_ipp$hi), K_env_ipp$lo), col = 'grey80', border = NA)
+lines(K_env_ipp$r, K_env_ipp$mmean, lty = "dashed")
+lines(K_env_ipp$r, K_env_ipp$obs, col = "red")
+# lines(K_obs_ipp$r, K_obs_ipp$border, col = "red")
+mtext(text = "A: Poisson Process", side = 3, cex = 1, line = 0.5, adj = 0)
+par(mar = c(2.1, 0, 2.1, 0))
+plot(log(pred_ipp.im), box = F, main = "", col = terrain.colors, ribbon = F)
+points(pp[,c("x","y")], col = rgb(0,0,0,alpha = 0.25), pch = 4)
+par(mar = c(3.1, 3.1, 1.1, 0))
+plot(K_env$r, K_env$mmean, type = "n", ylim = range(c(K_env$obs, K_env$hi, K_env$lo)),
+     ylab = "", xlab = "")#, yaxt = "n")
+# axis(side = 2, at = seq(0, 3e6, by = 1e6), labels = c("0", seq(1e6, 3e6, by = 1e6)))
+polygon(c(rev(K_env$r), K_env$r), c(rev(K_env$hi), K_env$lo), col = 'grey80', border = NA)
+lines(K_env$r, K_env$mmean, lty = "dashed")
+lines(K_env$r, K_env$obs, col = "red")
+# lines(K_obs$r, K_obs$border, col = "red")
 mtext(text = "distance (m)", side = 1, srt = 90, cex = 1, line = 2)
 mtext(text = "Inhomogeneous K Function", side = 2, srt = 90, cex = 1, xpd = T, outer = T, line = -1)
 mtext(text = "Estimated Intensity Surfaces with nest locations (x)", side = 4, srt = 90, cex = 1, xpd = T, outer = T, line = -16)

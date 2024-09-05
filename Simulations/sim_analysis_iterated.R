@@ -4,6 +4,7 @@ library(spatstat)
 library(sp)
 library(INLA)
 library(fields)
+library(scampr)
 
 ################################################################################
 # Function to interpolate some covariate at x, y locations #####################
@@ -158,6 +159,34 @@ if (model_to_test == "inla") {
   res9$ALL_TIME <- as.numeric(t9[3])
   # combine results
   res <- rbind(res0, res1, res2, res3, res4, res5, res6, res7, res8, res9)
+} else if (model_to_test == "scampr") {
+  source("fit_scampr.R")
+  source("fit_scampr_fixed.R")
+  bfs <- glmmTMB::make_basis(25, quad)
+  class(bfs)[2] <- "bf.df"
+  t0 <- system.time(assign("res0", fit_scampr_fixed(data = pres, quad = quad)))
+  bfs <- glmmTMB::make_basis(100, quad)
+  class(bfs)[2] <- "bf.df"
+  t1 <- system.time(assign("res1", fit_scampr_fixed(data = pres, quad = quad)))
+  bfs <- glmmTMB::make_basis(200, quad)
+  class(bfs)[2] <- "bf.df"
+  t2 <- system.time(assign("res2", fit_scampr_fixed(data = pres, quad = quad)))
+  bfs <- glmmTMB::make_basis(300, quad)
+  class(bfs)[2] <- "bf.df"
+  t3 <- system.time(assign("res3", fit_scampr_fixed(data = pres, quad = quad)))
+  bfs <- glmmTMB::make_basis(400, quad)
+  class(bfs)[2] <- "bf.df"
+  t4 <- system.time(assign("res4", fit_scampr_fixed(data = pres, quad = quad)))
+  t5 <- system.time(assign("res5", fit_scampr(data = pres, quad = quad)))
+  # add in the entire timings
+  res0$ALL_TIME <- as.numeric(t0[3])
+  res1$ALL_TIME <- as.numeric(t1[3])
+  res2$ALL_TIME <- as.numeric(t2[3])
+  res3$ALL_TIME <- as.numeric(t3[3])
+  res4$ALL_TIME <- as.numeric(t4[3])
+  res5$ALL_TIME <- as.numeric(t5[3])
+  # combine results
+  res <- rbind(res0, res1, res2, res3, res4, res5)
 }
 
 # collate with sim info

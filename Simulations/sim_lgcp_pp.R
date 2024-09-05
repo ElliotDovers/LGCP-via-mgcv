@@ -164,29 +164,34 @@ sim_lgcp_pp <- function(
   # reset the random seed for generating the latent field
   RFoptions(install="no", seed = rseed)
   
+  # set the log-intensity image so we can change the default window (to match for rLGCP)
+  eta.im <- vec2im(quad$eta.fixed, quad$x, quad$y)
+  eta.im$xrange <- c(1,100)
+  eta.im$yrange <- c(1,100)
+  
   # Simulate presence points
   if (latent.field) {
     # NOTE: when latent.smoothness = 0.5 these will all produce the same latent field with an exponential covariance function
     pp <- switch(latent.covar.function,
                  matern = spatstat.random::rLGCP(model = "matern",
-                                                 mu = vec2im(quad$eta.fixed, quad$x, quad$y),
+                                                 mu = eta.im,
                                                  # var = latent.marginal.variance, scale = sqrt((2*latent.smoothness))/latent.practical.range, nu = latent.smoothness,
                                                  var = latent.marginal.variance, scale = latent.practical.range, nu = latent.smoothness,
                                                  win = wnd,
                                                  saveLambda = TRUE),
                  stable = spatstat.random::rLGCP(model = "stable",
-                                                 mu = vec2im(quad$eta.fixed, quad$x, quad$y),
+                                                 mu = eta.im,
                                                  var = latent.marginal.variance, scale = latent.practical.range, alpha = 1.5, win = wnd,
                                                  saveLambda = TRUE),
                  exp = rLGCP(model = "exp",
-                             mu = vec2im(quad$eta.fixed, quad$x, quad$y),
+                             mu = eta.im,
                              var = latent.marginal.variance, scale = latent.practical.range,
                              win = wnd,
                              saveLambda = TRUE)
     )
     lambda_im <- attr(pp, "Lambda")
   } else {
-    lambda_im <- vec2im(exp(quad$eta.fixed), quad$x, quad$y)
+    lambda_im <- eta.im
     pp <- spatstat.random::rpoispp(lambda = lambda_im)
   }
   

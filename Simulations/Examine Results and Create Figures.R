@@ -44,9 +44,34 @@ res$scenario_env <- factor(res$env_range,
 #                     levels = c('gp.smooth:NA:REML', 'gp.smooth:ll:REML', 'gp.smooth:aic:REML', 'gp.smooth:score:REML', 'gp.smooth:bic:REML', 'gp.smooth:NA:GCV.Cp', 'gp.smooth:ll:GCV.Cp', 'gp.smooth:aic:GCV.Cp', 'gp.smooth:score:GCV.Cp', 'gp.smooth:bic:GCV.Cp', 'tprs.smooth:NA:REML', 'tprs.smooth:NA:GCV.Cp', 'pcmatern:NA:NA', 'default:NA:NA'),
 #                     labels = c("mgcv REML GP Def.", "mgcv REML GP LL", "mgcv REML GP AIC", "mgcv REML GP SCORE", "mgcv REML GP BIC",  "mgcv GCV GP Def.", "mgcv GCV GP LL", "mgcv GCV GP AIC", "mgcv GCV GP SCORE", "mgcv GCV GP BIC", "mgcv REML TPRS Def.", "mgcv GCV TPRS Def.",  "INLA Fuglstad P.C.", "INLA Def.")
 # )
+
+## ADD A CHANGE FOR ADDITIONAL SCAMPR RESULTS : ACCIDENTALLY STORED LL IN CRIT (SHIFTING TO EDF AS A TEMP FIX)
+res$EDF[res$FIT == "scampr"] <- as.numeric(res$CRIT[res$FIT == "scampr"])
+res$CRIT[res$FIT == "scampr"] <- NA
+## FOR SCAMPR: ALL_TIME RECORDS ADDITIONAL FITS AND BOTH THE VA AND LAPLACE VERSIONS: REPLACE WITH TIME
+res$ALL_TIME[res$FIT == "scampr"] <- res$TIME[res$FIT == "scampr"]
+## FOR SCAMPR: WANT TO DUPLICATE RESULTS FOR OPTIMISED SCAMPR FOR EACH K
+tmp <- res[res$GP_APPROX == "OPT", ]
+tmp1 <- tmp
+tmp2 <- tmp
+tmp3 <- tmp
+tmp4 <- tmp
+tmp5 <- tmp
+tmp1$K <- 25
+tmp2$K <- 100
+tmp3$K <- 200
+tmp4$K <- 300
+tmp5$K <- 400
+tmp <- res[res$GP_APPROX != "OPT", ]
+res <- rbind(tmp, tmp1, tmp2, tmp3, tmp4, tmp5)
+## ADDITIONALLY FIX THE INCORRECT LABELLING FOR SCAMPR FIXED
+res$K[res$K == 196] <- 200
+res$K[res$K == 289] <- 300
+################################################################################
+
 res$Approach <- factor(paste(res$GP_APPROX, res$CRIT, res$method, sep = ":"),
-                       levels = c('gp.smooth:NA:REML', 'gp.smooth:score:REML', 'gp.smooth:NA:GCV.Cp', 'gp.smooth:score:GCV.Cp', 'tprs.smooth:NA:REML', 'tprs.smooth:NA:GCV.Cp', 'pcmatern:NA:NA'),
-                       labels = c("mgcv REML GP Def.", "mgcv REML GP SCORE", "mgcv GCV GP Def.", "mgcv GCV GP SCORE", "mgcv REML TPRS Def.", "mgcv GCV TPRS Def.",  "INLA Fuglstad P.C.")
+                       levels = c('gp.smooth:NA:REML', 'gp.smooth:score:REML', 'gp.smooth:NA:GCV.Cp', 'gp.smooth:score:GCV.Cp', 'tprs.smooth:NA:REML', 'tprs.smooth:NA:GCV.Cp', 'pcmatern:NA:NA', 'FIXED:NA:VA', 'FIXED:NA:LP', 'OPT:NA:VA', 'OPT:NA:LP'),
+                       labels = c("mgcv REML GP Def.", "mgcv REML GP SCORE", "mgcv GCV GP Def.", "mgcv GCV GP SCORE", "mgcv REML TPRS Def.", "mgcv GCV TPRS Def.",  "INLA Fuglstad P.C.", "scampr fixed VA", "scampr fixed Laplace", "scampr VA", "scampr Laplace")
 )
 
 # put together results for appendices
@@ -98,7 +123,7 @@ res$E_N <- factor(res$intercept,
 #                   "royalblue1", "royalblue4" # INLA models
 # )
 fit_cols_all <- c("darkkhaki", "darkolivegreen3", "darkgoldenrod1", "darkgoldenrod4", "tomato1",
-                  "tomato4", "royalblue1"
+                  "tomato4", "royalblue1", "coral", "orchid1", "green4", "green3"
 )
 # separate out the results for the INLA comparison
 # 1: "mgcv REML GP Def."
@@ -184,6 +209,66 @@ p3 <- ggplot(data = res_sec1 %>% group_by(Approach, K) %>% summarise(y = mean(AL
 png(filename = paste0(home.wd, "/Figures/mgcv_inla_sim_results.png"), width = 6.2 * plot.res, height = 5.5 * plot.res, res = plot.res)
 grid.arrange(p1,p2,p3, nrow = 3)
 dev.off()
+
+# UPDATED YO INCLUDE SCAMPR SIMULATIONS
+mods_to_comp <- c(7,3,10,11)
+res_scampr <- res %>% filter(env_range == 30 & lat_range == 30 & intercept == -3.5 & K == 200 & Approach %in% levels(res$Approach)[mods_to_comp])
+res_scampr$Approach <- factor(res_scampr$Approach, levels = c("INLA Fuglstad P.C.", "mgcv GCV GP Def.", "scampr VA", "scampr Laplace"),
+                              labels = c("INLA", "mgcv", "scampr VA", "scampr Laplace"))
+
+# define the model colours for plotting
+fit_cols <- fit_cols_all[mods_to_comp]
+
+p1 <- ggplot(data = res_scampr %>% group_by(Approach, K), aes(y = MAE, fill = Approach, color = Approach)) +
+  geom_boxplot() +
+  scale_y_continuous(name = expression(paste(MAE,": |", mu, " - ", hat(mu), "|"))) +
+  scale_x_continuous(name = "") +
+  scale_color_manual(values = fit_cols) +
+  scale_fill_manual(values = alpha(fit_cols, alpha = 0.25)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), legend.position = "none",
+        axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        plot.margin = margin(t = 0, r = 107, b = 0, l = 0)
+  ) +
+  ggtitle(label = "Accuracy fitting the intensity function")
+
+cps <- res_scampr %>% group_by(Approach) %>% summarise(cp = mean(COVER_BETA)*100, cp_sd = sd(COVER_BETA))
+p2 <- ggplot(data = cps, aes(x = Approach, y = cp, color = Approach)) +
+  geom_point(size = 2) +
+  geom_abline(slope = 0, intercept = log(95), col = "red", lty = "dashed") +
+  geom_abline(slope = 0, intercept = 95, col = "red", lty = "dashed") +
+  # scale_y_continuous(name = expression(paste("Cover. Prob. ", beta[1], " (", alpha, " = 0.05)")), trans = "log", breaks = c(50, 60, 70, 80, 90, 100), labels = c("50%", "60%", "70%", "80%", "90%", "100%"), limits = c(10, 100)) +
+  scale_y_continuous(name = expression(paste("Cover. Prob. ", beta[1], " (", alpha, " = 0.05)")), breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100), labels = c("10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"), limits = c(50, 100)) +
+  scale_x_discrete(name = "") +
+  scale_color_manual(values = fit_cols, name = "Software")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  # scale_fill_manual(values = alpha(fit_cols, alpha = 0.5), name = "Software", labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 1.8),
+        axis.text.x = element_blank(), axis.ticks.x = element_blank(), legend.key = element_blank(),
+        plot.margin = margin(t = 0, r = 0, b = 0, l = 3)
+  ) +
+  ggtitle(label = "Inference on fixed effects")
+
+p3 <- ggplot(data = res_scampr %>% group_by(Approach), aes(x = Approach, y = ALL_TIME, color = Approach, fill = Approach)) +
+  geom_boxplot() +
+  scale_y_continuous(name = "Comp. Time (sec)") +
+  scale_x_discrete(name = "")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  scale_color_manual(values = fit_cols, name = "Software")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  scale_fill_manual(values = alpha(fit_cols, alpha = 0.5)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 9),
+        plot.margin = margin(t = 0, r = 108, b = 6, l = 20), legend.position = "none"
+  ) +
+  ggtitle(label = "Computational efficiency")
+
+# Main result plot
+png(filename = paste0(home.wd, "/Figures/mgcv_inla_scampr_sim_results.png"), width = 6.2 * plot.res, height = 6 * plot.res, res = plot.res)
+grid.arrange(p1,p2,p3, nrow = 3)
+dev.off()
+
 
 ## Appendices Plots ##
 
