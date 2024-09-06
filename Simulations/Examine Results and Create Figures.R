@@ -210,11 +210,13 @@ png(filename = paste0(home.wd, "/Figures/mgcv_inla_sim_results.png"), width = 6.
 grid.arrange(p1,p2,p3, nrow = 3)
 dev.off()
 
-# UPDATED YO INCLUDE SCAMPR SIMULATIONS
-mods_to_comp <- c(7,3,10,11)
+# UPDATED TO INCLUDE SCAMPR SIMULATIONS ########################################
+
+# HARD SCENARIO - with mgcv
+mods_to_comp <- c(7,10,11,3)
 res_scampr <- res %>% filter(env_range == 30 & lat_range == 30 & intercept == -3.5 & K == 200 & Approach %in% levels(res$Approach)[mods_to_comp])
-res_scampr$Approach <- factor(res_scampr$Approach, levels = c("INLA Fuglstad P.C.", "mgcv GCV GP Def.", "scampr VA", "scampr Laplace"),
-                              labels = c("INLA", "mgcv", "scampr VA", "scampr Laplace"))
+res_scampr$Approach <- factor(res_scampr$Approach, levels = c("INLA Fuglstad P.C.", "scampr VA", "scampr Laplace", "mgcv GCV GP Def."),
+                              labels = c("INLA", "scampr VA", "scampr Laplace", "mgcv"))
 
 # define the model colours for plotting
 fit_cols <- fit_cols_all[mods_to_comp]
@@ -265,10 +267,189 @@ p3 <- ggplot(data = res_scampr %>% group_by(Approach), aes(x = Approach, y = ALL
   ggtitle(label = "Computational efficiency")
 
 # Main result plot
-png(filename = paste0(home.wd, "/Figures/mgcv_inla_scampr_sim_results.png"), width = 6.2 * plot.res, height = 6 * plot.res, res = plot.res)
+png(filename = paste0(home.wd, "/Figures/comparison_all_hard_scenario.png"), width = 6.2 * plot.res, height = 6 * plot.res, res = plot.res)
 grid.arrange(p1,p2,p3, nrow = 3)
 dev.off()
 
+# HARD SCENARIO - without mgcv
+mods_to_comp <- c(7,10,11)
+res_scampr <- res %>% filter(env_range == 30 & lat_range == 30 & intercept == -3.5 & K == 200 & Approach %in% levels(res$Approach)[mods_to_comp])
+res_scampr$Approach <- factor(res_scampr$Approach, levels = c("INLA Fuglstad P.C.", "scampr VA", "scampr Laplace"),
+                              labels = c("INLA", "scampr VA", "scampr Laplace"))
+
+# define the model colours for plotting
+fit_cols <- fit_cols_all[mods_to_comp]
+
+p1 <- ggplot(data = res_scampr %>% group_by(Approach, K), aes(y = MAE, fill = Approach, color = Approach)) +
+  geom_boxplot() +
+  scale_y_continuous(name = expression(paste(MAE,": |", mu, " - ", hat(mu), "|"))) +
+  scale_x_continuous(name = "") +
+  scale_color_manual(values = fit_cols) +
+  scale_fill_manual(values = alpha(fit_cols, alpha = 0.25)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), legend.position = "none",
+        axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        plot.margin = margin(t = 0, r = 107, b = 0, l = 0)
+  ) +
+  ggtitle(label = "Accuracy fitting the intensity function")
+
+cps <- res_scampr %>% group_by(Approach) %>% summarise(cp = mean(COVER_BETA)*100, cp_sd = sd(COVER_BETA))
+p2 <- ggplot(data = cps, aes(x = Approach, y = cp, color = Approach)) +
+  geom_point(size = 2) +
+  geom_abline(slope = 0, intercept = log(95), col = "red", lty = "dashed") +
+  geom_abline(slope = 0, intercept = 95, col = "red", lty = "dashed") +
+  # scale_y_continuous(name = expression(paste("Cover. Prob. ", beta[1], " (", alpha, " = 0.05)")), trans = "log", breaks = c(50, 60, 70, 80, 90, 100), labels = c("50%", "60%", "70%", "80%", "90%", "100%"), limits = c(10, 100)) +
+  scale_y_continuous(name = expression(paste("Cover. Prob. ", beta[1], " (", alpha, " = 0.05)")), breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100), labels = c("10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"), limits = c(50, 100)) +
+  scale_x_discrete(name = "") +
+  scale_color_manual(values = fit_cols, name = "Software")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  # scale_fill_manual(values = alpha(fit_cols, alpha = 0.5), name = "Software", labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 1.8),
+        axis.text.x = element_blank(), axis.ticks.x = element_blank(), legend.key = element_blank(),
+        plot.margin = margin(t = 0, r = 0, b = 0, l = 3)
+  ) +
+  ggtitle(label = "Inference on fixed effects")
+
+p3 <- ggplot(data = res_scampr %>% group_by(Approach), aes(x = Approach, y = ALL_TIME, color = Approach, fill = Approach)) +
+  geom_boxplot() +
+  scale_y_continuous(name = "Comp. Time (sec)") +
+  scale_x_discrete(name = "")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  scale_color_manual(values = fit_cols, name = "Software")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  scale_fill_manual(values = alpha(fit_cols, alpha = 0.5)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 9),
+        plot.margin = margin(t = 0, r = 108, b = 6, l = 20), legend.position = "none"
+  ) +
+  ggtitle(label = "Computational efficiency")
+
+# Main result plot
+png(filename = paste0(home.wd, "/Figures/comparison_all_hard_scenario_without_mgcv.png"), width = 6.2 * plot.res, height = 6 * plot.res, res = plot.res)
+grid.arrange(p1,p2,p3, nrow = 3)
+dev.off()
+
+
+# EASY SCENARIO - with mgcv
+mods_to_comp <- c(7,10,11,3)
+res_scampr <- res %>% filter(env_range == 10 & lat_range == 50 & intercept == -3.5 & K == 200 & Approach %in% levels(res$Approach)[mods_to_comp])
+res_scampr$Approach <- factor(res_scampr$Approach, levels = c("INLA Fuglstad P.C.", "scampr VA", "scampr Laplace", "mgcv GCV GP Def."),
+                              labels = c("INLA", "scampr VA", "scampr Laplace", "mgcv"))
+
+# define the model colours for plotting
+fit_cols <- fit_cols_all[mods_to_comp]
+
+p1 <- ggplot(data = res_scampr %>% group_by(Approach, K), aes(y = MAE, fill = Approach, color = Approach)) +
+  geom_boxplot() +
+  scale_y_continuous(name = expression(paste(MAE,": |", mu, " - ", hat(mu), "|"))) +
+  scale_x_continuous(name = "") +
+  scale_color_manual(values = fit_cols) +
+  scale_fill_manual(values = alpha(fit_cols, alpha = 0.25)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), legend.position = "none",
+        axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        plot.margin = margin(t = 0, r = 107, b = 0, l = 0)
+  ) +
+  ggtitle(label = "Accuracy fitting the intensity function")
+
+cps <- res_scampr %>% group_by(Approach) %>% summarise(cp = mean(COVER_BETA)*100, cp_sd = sd(COVER_BETA))
+p2 <- ggplot(data = cps, aes(x = Approach, y = cp, color = Approach)) +
+  geom_point(size = 2) +
+  geom_abline(slope = 0, intercept = log(95), col = "red", lty = "dashed") +
+  geom_abline(slope = 0, intercept = 95, col = "red", lty = "dashed") +
+  # scale_y_continuous(name = expression(paste("Cover. Prob. ", beta[1], " (", alpha, " = 0.05)")), trans = "log", breaks = c(50, 60, 70, 80, 90, 100), labels = c("50%", "60%", "70%", "80%", "90%", "100%"), limits = c(10, 100)) +
+  scale_y_continuous(name = expression(paste("Cover. Prob. ", beta[1], " (", alpha, " = 0.05)")), breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100), labels = c("10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"), limits = c(50, 100)) +
+  scale_x_discrete(name = "") +
+  scale_color_manual(values = fit_cols, name = "Software")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  # scale_fill_manual(values = alpha(fit_cols, alpha = 0.5), name = "Software", labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 1.8),
+        axis.text.x = element_blank(), axis.ticks.x = element_blank(), legend.key = element_blank(),
+        plot.margin = margin(t = 0, r = 0, b = 0, l = 3)
+  ) +
+  ggtitle(label = "Inference on fixed effects")
+
+p3 <- ggplot(data = res_scampr %>% group_by(Approach), aes(x = Approach, y = ALL_TIME, color = Approach, fill = Approach)) +
+  geom_boxplot() +
+  scale_y_continuous(name = "Comp. Time (sec)") +
+  scale_x_discrete(name = "")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  scale_color_manual(values = fit_cols, name = "Software")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  scale_fill_manual(values = alpha(fit_cols, alpha = 0.5)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 9),
+        plot.margin = margin(t = 0, r = 108, b = 6, l = 20), legend.position = "none"
+  ) +
+  ggtitle(label = "Computational efficiency")
+
+# Main result plot
+png(filename = paste0(home.wd, "/Figures/comparison_all_easy_scenario.png"), width = 6.2 * plot.res, height = 6 * plot.res, res = plot.res)
+grid.arrange(p1,p2,p3, nrow = 3)
+dev.off()
+
+# EASY SCENARIO - without mgcv
+mods_to_comp <- c(7,10,11)
+res_scampr <- res %>% filter(env_range == 10 & lat_range == 50 & intercept == -3.5 & K == 200 & Approach %in% levels(res$Approach)[mods_to_comp])
+res_scampr$Approach <- factor(res_scampr$Approach, levels = c("INLA Fuglstad P.C.", "scampr VA", "scampr Laplace"),
+                              labels = c("INLA", "scampr VA", "scampr Laplace"))
+
+# define the model colours for plotting
+fit_cols <- fit_cols_all[mods_to_comp]
+
+p1 <- ggplot(data = res_scampr %>% group_by(Approach, K), aes(y = MAE, fill = Approach, color = Approach)) +
+  geom_boxplot() +
+  scale_y_continuous(name = expression(paste(MAE,": |", mu, " - ", hat(mu), "|"))) +
+  scale_x_continuous(name = "") +
+  scale_color_manual(values = fit_cols) +
+  scale_fill_manual(values = alpha(fit_cols, alpha = 0.25)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), legend.position = "none",
+        axis.text.x = element_blank(), axis.ticks.x = element_blank(),
+        plot.margin = margin(t = 0, r = 107, b = 0, l = 0)
+  ) +
+  ggtitle(label = "Accuracy fitting the intensity function")
+
+cps <- res_scampr %>% group_by(Approach) %>% summarise(cp = mean(COVER_BETA)*100, cp_sd = sd(COVER_BETA))
+p2 <- ggplot(data = cps, aes(x = Approach, y = cp, color = Approach)) +
+  geom_point(size = 2) +
+  geom_abline(slope = 0, intercept = log(95), col = "red", lty = "dashed") +
+  geom_abline(slope = 0, intercept = 95, col = "red", lty = "dashed") +
+  # scale_y_continuous(name = expression(paste("Cover. Prob. ", beta[1], " (", alpha, " = 0.05)")), trans = "log", breaks = c(50, 60, 70, 80, 90, 100), labels = c("50%", "60%", "70%", "80%", "90%", "100%"), limits = c(10, 100)) +
+  scale_y_continuous(name = expression(paste("Cover. Prob. ", beta[1], " (", alpha, " = 0.05)")), breaks = c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100), labels = c("10%", "20%", "30%", "40%", "50%", "60%", "70%", "80%", "90%", "100%"), limits = c(50, 100)) +
+  scale_x_discrete(name = "") +
+  scale_color_manual(values = fit_cols, name = "Software")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  # scale_fill_manual(values = alpha(fit_cols, alpha = 0.5), name = "Software", labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 1.8),
+        axis.text.x = element_blank(), axis.ticks.x = element_blank(), legend.key = element_blank(),
+        plot.margin = margin(t = 0, r = 0, b = 0, l = 3)
+  ) +
+  ggtitle(label = "Inference on fixed effects")
+
+p3 <- ggplot(data = res_scampr %>% group_by(Approach), aes(x = Approach, y = ALL_TIME, color = Approach, fill = Approach)) +
+  geom_boxplot() +
+  scale_y_continuous(name = "Comp. Time (sec)") +
+  scale_x_discrete(name = "")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  scale_color_manual(values = fit_cols, name = "Software")+#, labels = c("mgcv", "INLA", "scampr VA", "scampr Laplace")) +
+  scale_fill_manual(values = alpha(fit_cols, alpha = 0.5)) +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        panel.background = element_rect(fill = NA, color = "black"), axis.line = element_line(colour = "black"),
+        axis.text.y = element_text(size=10), axis.title.y = element_text(vjust = 9),
+        plot.margin = margin(t = 0, r = 108, b = 6, l = 20), legend.position = "none"
+  ) +
+  ggtitle(label = "Computational efficiency")
+
+# Main result plot
+png(filename = paste0(home.wd, "/Figures/comparison_all_easy_scenario_without_mgcv.png"), width = 6.2 * plot.res, height = 6 * plot.res, res = plot.res)
+grid.arrange(p1,p2,p3, nrow = 3)
+dev.off()
+
+################################################################################
 
 ## Appendices Plots ##
 
